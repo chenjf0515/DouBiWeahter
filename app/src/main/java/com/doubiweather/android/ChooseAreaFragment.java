@@ -87,7 +87,7 @@ public class ChooseAreaFragment extends Fragment {
         titleText = (TextView) view.findViewById(R.id.title_text);
         backButton = (Button) view.findViewById(R.id.button_back);
         listView = (ListView) view.findViewById(R.id.list_view);
-        arrayAdapter = new ArrayAdapter<String>(getContext(), android.R.layout.simple_expandable_list_item_2, dataList);
+        arrayAdapter = new ArrayAdapter<>(getContext(), android.R.layout.simple_list_item_1, dataList);
         listView.setAdapter(arrayAdapter);
 
         return view;
@@ -102,13 +102,24 @@ public class ChooseAreaFragment extends Fragment {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 if (currentLevel == LEVEL_PROVINCE) {
                     selectedProvince = provinceList.get(position);
-
-                }else if (currentLevel == LEVEL_CITY){
-                    selectedCity = cityList.get(position);
                     queryCity();
+                } else if (currentLevel == LEVEL_CITY) {
+                    selectedCity = cityList.get(position);
+                    queryCounties();
                 }
             }
         });
+        backButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if (currentLevel == LEVEL_COUNTY) {
+                    queryCity();
+                } else if (currentLevel == LEVEL_CITY) {
+                    queryProvince();
+                }
+            }
+        });
+        queryProvince();
 
     }
 
@@ -142,7 +153,7 @@ public class ChooseAreaFragment extends Fragment {
     private void queryCity() {
         titleText.setText(selectedProvince.getProvinceName());
         backButton.setVisibility(View.VISIBLE);
-        cityList = DataSupport.where("province = ?", String.valueOf(selectedProvince.getId())).find(City.class);
+        cityList = DataSupport.where("provinceid = ?", String.valueOf(selectedProvince.getId())).find(City.class);
         if (cityList.size() > 0) {
             dataList.clear();
             for (City c : cityList) {
@@ -174,16 +185,21 @@ public class ChooseAreaFragment extends Fragment {
 
 
             }
+
             arrayAdapter.notifyDataSetChanged();
             listView.setSelection(0);
+            currentLevel = LEVEL_COUNTY;
+        } else {
             String address = addressChina + "/" + selectedProvince.getProvinceCode() + "/" + selectedCity.getCityCode();
             queryFromService(address, "county");
-        }
 
+
+        }
     }
 
     /**
      * 根据传入的地址和数据类型，从服务器查询市县数据
+     *
      * @param address
      * @param type
      */
@@ -195,7 +211,7 @@ public class ChooseAreaFragment extends Fragment {
                     @Override
                     public void run() {
                         closeProgressDialog();
-                        Toast.makeText(getContext(), "加载失败",Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "加载失败", Toast.LENGTH_SHORT).show();
                     }
                 });
 
