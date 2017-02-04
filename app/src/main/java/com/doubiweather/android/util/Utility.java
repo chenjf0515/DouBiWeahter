@@ -5,6 +5,8 @@ import android.text.TextUtils;
 import com.doubiweather.android.db.City;
 import com.doubiweather.android.db.County;
 import com.doubiweather.android.db.Province;
+import com.doubiweather.android.gson.Weather;
+import com.google.gson.Gson;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -17,6 +19,7 @@ import org.json.JSONObject;
 public class Utility {
     /**
      * 解析service请求返回的province数据
+     *
      * @param response
      * @return
      */
@@ -45,6 +48,7 @@ public class Utility {
 
     /**
      * 解析service返回的city数据
+     *
      * @param response
      * @param provinceId
      * @return
@@ -73,11 +77,12 @@ public class Utility {
 
     /**
      * 解析service返回的county数据
+     *
      * @param response
      * @param cityId
      * @return
      */
-    public static boolean handleCountyResponse(String response, int cityId)  {
+    public static boolean handleCountyResponse(String response, int cityId) {
         if (!TextUtils.isEmpty(response)) {
             JSONArray allCounties = null;
             try {
@@ -100,6 +105,17 @@ public class Utility {
         return false;
     }
 
+    public static Weather handleWeatherResponse(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            JSONArray jsonArray = jsonObject.getJSONArray("HeWeather");
+            String weatherContent = jsonArray.get(0).toString();
+            return new Gson().fromJson(weatherContent, Weather.class);
 
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+        return null;
 
+    }
 }
