@@ -1,10 +1,12 @@
 package com.doubiweather.android.util;
 
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.doubiweather.android.db.City;
 import com.doubiweather.android.db.County;
 import com.doubiweather.android.db.Province;
+import com.doubiweather.android.gson.BackgroundImage;
 import com.doubiweather.android.gson.Weather;
 import com.google.gson.Gson;
 
@@ -105,11 +107,22 @@ public class Utility {
         return false;
     }
 
+    /**
+     * 解析获得的天气信息，并以weather对象返回
+     * @param response
+     * @return
+     */
     public static Weather handleWeatherResponse(String response) {
         try {
             JSONObject jsonObject = new JSONObject(response);
-            JSONArray jsonArray = jsonObject.getJSONArray("HeWeather");
+            JSONArray jsonArray = jsonObject.getJSONArray("HeWeather data service 3.0");
             String weatherContent = jsonArray.get(0).toString();
+            if (TextUtils.isEmpty(weatherContent)) {
+                Log.d("Utility", "isNull");
+            }else {
+                Log.d("Utility",weatherContent);
+            }
+
             return new Gson().fromJson(weatherContent, Weather.class);
 
         } catch (JSONException e) {
@@ -118,4 +131,21 @@ public class Utility {
         return null;
 
     }
+
+    public static BackgroundImage handleBingResponse(String response) {
+        try {
+            JSONObject jsonObject = new JSONObject(response);
+            JSONArray jsonArray = jsonObject.getJSONArray("images");
+            String bingString = jsonArray.get(0).toString();
+            return new Gson().fromJson(bingString, BackgroundImage.class);
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return null;
+    }
+
+
+
 }

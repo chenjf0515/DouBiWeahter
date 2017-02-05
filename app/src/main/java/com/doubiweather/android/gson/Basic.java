@@ -12,13 +12,13 @@ public class Basic
     public String cityName;
 
     @SerializedName("id")
-    private String weatherId;
+    public String weatherId;
 
     public Update update;
 
 
-    private class Update {
+    public class Update {
         @SerializedName("loc")
-        private String updateTime;
+        public String updateTime;
     }
 }

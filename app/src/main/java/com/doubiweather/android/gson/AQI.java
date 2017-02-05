@@ -5,7 +5,7 @@ package com.doubiweather.android.gson;
  */
 
 public class AQI {
-    public AQICity aqiCity;
+    public AQICity city; //可能报错
 
 
     public class AQICity {
