@@ -117,11 +117,6 @@ public class Utility {
             JSONObject jsonObject = new JSONObject(response);
             JSONArray jsonArray = jsonObject.getJSONArray("HeWeather data service 3.0");
             String weatherContent = jsonArray.get(0).toString();
-            if (TextUtils.isEmpty(weatherContent)) {
-                Log.d("Utility", "isNull");
-            }else {
-                Log.d("Utility",weatherContent);
-            }
 
             return new Gson().fromJson(weatherContent, Weather.class);
 
@@ -137,6 +132,7 @@ public class Utility {
             JSONObject jsonObject = new JSONObject(response);
             JSONArray jsonArray = jsonObject.getJSONArray("images");
             String bingString = jsonArray.get(0).toString();
+            Log.d("Utility", bingString);
             return new Gson().fromJson(bingString, BackgroundImage.class);
 
         } catch (JSONException e) {

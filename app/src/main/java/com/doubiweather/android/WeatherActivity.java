@@ -1,12 +1,18 @@
 package com.doubiweather.android;
 
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.os.Build;
 import android.preference.PreferenceManager;
+import android.support.v4.view.GravityCompat;
+import android.support.v4.widget.DrawerLayout;
+import android.support.v4.widget.SwipeRefreshLayout;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -53,83 +59,99 @@ public class WeatherActivity extends AppCompatActivity {
 
     private ImageView bingImage;
 
+    public SwipeRefreshLayout refreshLayout;
+
+    private Button navButton;
+
+    public DrawerLayout drawerLayout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (Build.VERSION.SDK_INT >= 21) {
+            View decorView = getWindow().getDecorView();
+            decorView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            getWindow().setStatusBarColor(Color.TRANSPARENT);
+        }
         setContentView(R.layout.activity_weather);
         initUI();
+
+        //下拉刷新。
+        refreshLayout.setColorSchemeResources(R.color.colorPrimary);
+
+
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = preferences.getString("weather", null);
+        final String weatherId;
         if (weatherString != null) {
             //有缓存天气时，直接解析缓存天气数据
             Weather weather = Utility.handleWeatherResponse(weatherString);
+            weatherId = weather.basic.weatherId;
             showWeatherInfo(weather);
         } else {
-            String weatherId = getIntent().getExtras().getString("weather_id");
+            weatherId = getIntent().getExtras().getString("weather_id");
             weatherLayout.setVisibility(View.INVISIBLE);
             requestWeather(weatherId);
         }
+
+        refreshLayout.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(weatherId);
+            }
+        });
 
         String bingPic = preferences.getString("bing_pic", null);
         if (bingPic != null) {
             Glide.with(this).load(bingPic).into(bingImage);
         } else {
-            loadBingPic();
+            String address = "http://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1";
+            loadBingPic(address);
         }
+
+
+        //侧滑处理
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
+
+
     }
+
+
 
     /**
      * 加载每日bing图
      */
-    private void loadBingPic() {
-        String address = "http://cn.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1";
-        String bingImageUrl = handleBingImageUrl(address);
-        HttpUtil.sendOKHttpRequest(bingImageUrl, new Callback() {
-            @Override
-            public void onFailure(Call call, IOException e) {
-                //加载失败
-
-            }
-
-            @Override
-            public void onResponse(Call call, Response response) throws IOException {
-                final String bingPic = response.body().string();
-                SharedPreferences.Editor editor= PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
-                editor.putString("bing_pic", bingPic);
-                editor.apply();
-
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        Glide.with(WeatherActivity.this).load(bingPic).into(bingImage);
-                    }
-                });
-
-            }
-        });
 
 
-    }
-
-    private String handleBingImageUrl(String address) {
-        final String[] bingImageUrl = new String[1];
+    private void loadBingPic(String address) {
         HttpUtil.sendOKHttpRequest(address, new Callback() {
             @Override
             public void onFailure(Call call, IOException e) {
-                //Toast.makeText(WeatherActivity.this, "背景图加载失败！！！", Toast.LENGTH_SHORT).show();
-                e.printStackTrace();
+
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                String responseContent = response.body().string();
-                BackgroundImage backgroundImage = Utility.handleBingResponse(responseContent);
-                bingImageUrl[0] = "cn.bing.com" + backgroundImage.url;
+                String bingPic = response.body().string();
+                BackgroundImage imageUrl = Utility.handleBingResponse(bingPic);
+                final String bingImageUrl = "http://cn.bing.com" + imageUrl.url;
+                SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
+                editor.putString("bing_pic", bingImageUrl);
+                editor.apply();
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        Glide.with(WeatherActivity.this).load(bingImageUrl).into(bingImage);
+                    }
+                });
             }
         });
-
-        return bingImageUrl[0];
 
     }
 
@@ -140,7 +162,7 @@ public class WeatherActivity extends AppCompatActivity {
      *
      * @param weatherId
      */
-    private void requestWeather(String weatherId) {
+    public void requestWeather(String weatherId) {
         String address = "https://free-api.heweather.com/x3/weather?cityid=" + weatherId + "&key=dba73d823836445490ac0700a8bef25b";
 
         HttpUtil.sendOKHttpRequest(address, new Callback() {
@@ -173,6 +195,7 @@ public class WeatherActivity extends AppCompatActivity {
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
 
                         }
+                        refreshLayout.setRefreshing(false);
                     }
                 });
 
@@ -217,9 +240,9 @@ public class WeatherActivity extends AppCompatActivity {
             Log.d(TAG, "weather.aqi is null");
         }
 
-        String comfort = "舒适度：" + weather.suggestion.comfort;
-        String carWash = "洗车指数：" + weather.suggestion.carWash;
-        String sport = "运动建议：" + weather.suggestion.sport;
+        String comfort = "舒适度：" + weather.suggestion.comfort.info;
+        String carWash = "洗车指数：" + weather.suggestion.carWash.info;
+        String sport = "运动建议：" + weather.suggestion.sport.info;
         comfortText.setText(comfort);
         carWashText.setText(carWash);
         sportText.setText(sport);
@@ -240,6 +263,9 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText = (TextView) findViewById(R.id.car_wash_text);
         sportText = (TextView) findViewById(R.id.sport_text);
         bingImage = (ImageView) findViewById(R.id.bing_pic_image);
+        refreshLayout = (SwipeRefreshLayout) findViewById(R.id.swip_refresh);
+        navButton = (Button) findViewById(R.id.nav_button);
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layout);
     }
 
 }
